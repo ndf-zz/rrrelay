@@ -1,0 +1,13 @@
+[Unit]
+Description=RR and TB Relay
+Wants=network.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=rrrelay
+User=airtrack
+WorkingDirectory=~
+
+[Install]
+WantedBy=multi-user.target
