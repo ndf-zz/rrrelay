@@ -26,6 +26,20 @@ qos		|	(int) qos value for passing messages [2]
 userid		|	(string) optional RR customer ID ['']
 
 
+## Decoder Setup
+
+### Race Result System
+
+Open the decoder web interface and select the "Configuration" link.
+Under "Upload target" select the option "Custom (HTTP)",
+and enter the public ip, port and path to your rrrelay instance:
+
+![RRS Config](rrs_config.png "RRS Config")
+
+Then enable mobile upload on the decoder panel menu.
+
+### Track Box
+
 ## Requirements
 
    - metarace >=2.0
