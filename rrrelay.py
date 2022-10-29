@@ -76,10 +76,7 @@ class TbpHandler(tornado.web.RequestHandler):
         if not self.app.userid or user == self.app.userid:
             deviceid = self.get_argument('boxId')
             posinfo = self.get_argument('boxPos', 'U')
-            channel = 'C1'
-            boxname = self.get_argument('boxName', '')
-            if boxname and boxname.startswith('C'):
-                channel = boxname
+            channel = self.app.channel(deviceid, 'C1')
             fileindex = self.get_argument('index', '0')
             count = self.get_argument('count', '0')
             datestr = fixdate(self.get_argument('boxTime'))
@@ -95,7 +92,7 @@ class TbpHandler(tornado.web.RequestHandler):
                         eventid = pv[10]
                         if eventid and eventid != '0':
                             tagid = '-'.join((eventid, tagid))
-                        tagtime = boxtime - tod.mktod(pv[1])
+                        tagtime = boxtime - tod.tod(pv[1])
                         rssi = int(pv[2])
                         hitcount = int(pv[3])
                         if hitcount < 4 or rssi < -82:
@@ -132,9 +129,9 @@ class RrsHandler(tornado.web.RequestHandler):
                     #_log.debug('Rawpass: %r', pv)
                     if len(pv) == _RRSLEN:
                         tagid = ''
-                        channel = 'C1'
+                        channel = self.app.channel(deviceid, 'C1')
                         date = pv[2]
-                        tod = pv[3]
+                        time = tod.tod(pv[3])
                         hitcount = int(pv[5])
                         rssi = int(pv[6])
                         isactive = bool(int(pv[10]))
@@ -161,7 +158,10 @@ class RrsHandler(tornado.web.RequestHandler):
                                 _log.warning(
                                     'Poor read %s: Hits:%d RSSI:%ddBm', tagid,
                                     hitcount, rssi)
-                        prec = [None, deviceid, channel, tagid, tod, date]
+                        prec = [
+                            None, deviceid, channel, tagid,
+                            time.rawtime(3), date
+                        ]
                         passings.append(prec)
                         astr = 'passive'
                         if isactive:
@@ -188,6 +188,7 @@ class app:
         self._passings = []
         self._qos = _QOS
         self._shutdown = None
+        self._loopids = {}
         self.userid = _USERID
 
     def _loadconfig(self):
@@ -205,6 +206,18 @@ class app:
         if metarace.sysconf.has_option('rrrelay', 'userid'):
             self.userid = metarace.sysconf.get_str('rrrelay', 'userid',
                                                    _USERID)
+        if metarace.sysconf.has_option('rrrelay', 'passiveloop'):
+            try:
+                loopids = metarace.sysconf.get('rrrelay', 'passiveloop')
+                if isinstance(loopids, dict):
+                    for deviceid in loopids:
+                        if isinstance(loopids[deviceid], str):
+                            self._loopids[deviceid] = loopids[deviceid]
+                else:
+                    _log.info('Ignored invalid loopids entry')
+            except Exception as e:
+                _log.warning('%s reading loopids: %s', e.__class__.__name__, e)
+            _log.info('Set loop ID overrides to: %r', self._loopids)
 
         _log.debug(
             'Config: port=%r, statustopic=%r, passtopic=%r, qos=%r, userid=%r',
@@ -219,6 +232,16 @@ class app:
         except Exception as e:
             _log.error('%s reading stored passings: %s', e.__class__.__name__,
                        e)
+
+    def channel(self, device, channel='C1'):
+        """Return a channel id for the provided device"""
+        try:
+            if device in self._loopids:
+                channel = self._loopids[device]
+        except Exception as e:
+            _log.info('%s reading %r channel id: %s', e.__class__.__name__,
+                      device, e)
+        return channel
 
     def status(self, s):
         """Update the track box status file and publish"""

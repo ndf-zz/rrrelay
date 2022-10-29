@@ -24,6 +24,16 @@ passtopic	|	(string) MQTT relay topic for passings ['timing/data']
 statustopic	|	(string) MQTT relay topic for status ['timing/status']
 qos		|	(int) qos value for passing messages [2]
 userid		|	(string) optional RR customer ID ['']
+passiveloop	|	(dict) map passive device ids to loop ids [{}] (1)
+
+Notes:
+
+   1. Decoders reporting passive transponder reads can have their loopid
+      overridden to force a specific channel id. For example, the following
+      entry for passiveloop would assign all passive reads from decoder
+      "D-23678" channel id "C5".
+
+	"passiveloop":{"D-23678":"C5"}
 
 
 ## Decoder Setup
