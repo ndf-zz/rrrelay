@@ -1,7 +1,7 @@
 # rrrelay
 
-Relay transponder passings from Race Result Decoder and Track Box units
-to telegraph as timer messages:
+Relay HTTP POST transponder passings from Race Result Decoder
+and Track Box units to telegraph as timer messages:
 
 	INDEX;SOURCE;CHANNEL;REFID;TOD;DATE
 
@@ -11,6 +11,14 @@ to telegraph as timer messages:
    - REFID : transponder unique ID
    - TOD : local time of day string eg 13h27:52.4321
    - DATE : date of passing  eg 2023-02-27
+
+
+## HTTP Endpoints
+
+   - POST /rrs : Race Result decoder (passive and active)
+   - POST /tbp : Track Box Ping
+   - POST /tbs : Track Box Status
+
 
 ## Configuration
 
