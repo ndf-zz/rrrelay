@@ -41,6 +41,7 @@ _PORT = 53037
 _PASSTOPIC = 'timing/data'
 _STATUSTOPIC = 'timing/status'
 _SAVEFILE = 'passings.json'
+_SAVEINTERVAL = 15
 _USERID = ''
 _TBPLEN = 11
 _RRSLEN = 19
@@ -189,6 +190,8 @@ class app:
         self._qos = _QOS
         self._shutdown = None
         self._loopids = {}
+        self._dirty = True
+        self._savetasks = set()
         self.userid = _USERID
 
     def _loadconfig(self):
@@ -256,12 +259,14 @@ class app:
                 self._t.publish(topic=self._passtopic,
                                 message=u';'.join(p),
                                 qos=self._qos)
+                self._dirty = True
 
     def _savepassings(self):
         """Dump passings to the savefile"""
         try:
-            with open(_SAVEFILE, 'w') as f:
+            with metarace.savefile(_SAVEFILE) as f:
                 json.dump(self._passings, f)
+            self._dirty = False
         except Exception as e:
             _log.error('%s writing passings: %s', e.__class__.__name__, e)
 
@@ -269,6 +274,20 @@ class app:
         """Handle the TERM signal"""
         _log.info('Terminated by SIGTERM')
         self._shutdown.set()
+
+    def _queue_save(self):
+        """Create a task to save the passings, later"""
+        nextSave = asyncio.create_task(self._delayed_save())
+        self._savetasks.add(nextSave)
+        nextSave.add_done_callback(self._savetasks.discard)
+
+    async def _delayed_save(self):
+        """Write out the passings if required then re-schedule"""
+        await asyncio.sleep(_SAVEINTERVAL)
+        _log.debug('Save passings: dirty=%r', self._dirty)
+        if self._dirty:
+            self._savepassings()
+        self._queue_save()
 
     async def run(self):
         _log.info('Starting')
@@ -286,18 +305,16 @@ class app:
         asyncio.get_running_loop().add_signal_handler(signal.SIGTERM,
                                                       self._sigterm)
 
-        ##signal.signal(signal.SIGTERM, self._sigterm)
-
         try:
             # setup tornado async server
             _log.info('Starting http listener on port %r', self._port)
-            self._s = tornado.httpserver.HTTPServer(tornado.web.Application([
+            web = tornado.web.Application([
                 (r"/rrs", RrsHandler, dict(app=self)),
                 (r"/tbp", TbpHandler, dict(app=self)),
                 (r"/tbs", TbsHandler, dict(app=self)),
-            ]),
-                                                    ssl_options=None)
-            self._s.listen(self._port)
+            ])
+            web.listen(self._port)
+            self._queue_save()
             await self._shutdown.wait()
         except Exception as e:
             _log.error('%s: %s', e.__class__.__name__, e)
