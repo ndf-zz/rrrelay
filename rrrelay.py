@@ -17,7 +17,7 @@
 
 	POST /rrs	Race Result Decoder Passings
 	POST /tbp	Track Box 'Ping'	[TODO]
-	POST /tbs	Track Box 'Status'	[TODO]
+	GET /tbs	Track Box 'Status'	[TODO]
 
 """
 
@@ -41,7 +41,7 @@ _PORT = 53037
 _PASSTOPIC = 'timing/data'
 _STATUSTOPIC = 'timing/status'
 _SAVEFILE = 'passings.json'
-_SAVEINTERVAL = 15
+_SAVEINTERVAL = 30
 _USERID = ''
 _TBPLEN = 11
 _RRSLEN = 19
@@ -60,8 +60,18 @@ class TbsHandler(tornado.web.RequestHandler):
     def initialize(self, app):
         self.app = app
 
-    def post(self):
-        _log.debug('TB Status Request: %r', self.request)
+    async def get(self):
+        user = self.get_argument('custId', '-')
+        if not self.app.userid or user == self.app.userid:
+            deviceid = self.get_argument('boxId')
+            channel = self.app.channel(deviceid, 'C1')
+            datestr = fixdate(self.get_argument('boxTime'))
+            date, boxtime = tod.fromiso(datestr)
+            batt = self.get_argument('boxBatt')
+            temp = self.get_argument('boxTemp')
+            srec = [deviceid, channel, boxtime.rawtime(3), date, batt, temp]
+            _log.info('TBS: %r', srec)
+            await self.app.status(srec)
         self.write('OK')
 
 
@@ -72,7 +82,6 @@ class TbpHandler(tornado.web.RequestHandler):
         self.app = app
 
     async def post(self):
-        _log.debug('TB Ping Request: %r', self.request)
         user = self.get_argument('custId', '-')
         if not self.app.userid or user == self.app.userid:
             deviceid = self.get_argument('boxId')
@@ -87,7 +96,6 @@ class TbpHandler(tornado.web.RequestHandler):
                 passingstr = l.strip()
                 if passingstr:
                     pv = passingstr.split(';')
-                    _log.debug('Rawpass: %r', pv)
                     if len(pv) == _TBPLEN:
                         tagid = pv[0]
                         eventid = pv[10]
@@ -127,7 +135,6 @@ class RrsHandler(tornado.web.RequestHandler):
                 passingstr = l.strip()
                 if passingstr:
                     pv = passingstr.split(';')
-                    #_log.debug('Rawpass: %r', pv)
                     if len(pv) == _RRSLEN:
                         tagid = ''
                         channel = self.app.channel(deviceid, 'C1')
@@ -246,8 +253,9 @@ class app:
                       device, e)
         return channel
 
-    def status(self, s):
-        """Update the track box status file and publish"""
+    async def status(self, s):
+        """Publish the track box status"""
+        self._t.publish(topic=self._statustopic, message=u';'.join(s))
 
     async def passing(self, passings):
         """Relay and store provided passings"""
@@ -284,9 +292,9 @@ class app:
     async def _delayed_save(self):
         """Write out the passings if required then re-schedule"""
         await asyncio.sleep(_SAVEINTERVAL)
-        _log.debug('Save passings: dirty=%r', self._dirty)
         if self._dirty:
             self._savepassings()
+            _log.debug('Save %d passings', len(self._passings))
         self._queue_save()
 
     async def run(self):

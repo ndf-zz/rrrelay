@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rrrelay"
-version = "1.0.0"
+version = "1.0.1"
 description = "Race Result and TB Relay"
 readme = "README.md"
 requires-python = ">=3.6"
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
+    "tornado",
     "metarace",
 ]
 

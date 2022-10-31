@@ -15,9 +15,9 @@ and Track Box units to telegraph as timer messages:
 
 ## HTTP Endpoints
 
-   - POST /rrs : Race Result decoder (passive and active)
+   - POST /rrs : Race Result Decoder (passive and active)
    - POST /tbp : Track Box Ping
-   - POST /tbs : Track Box Status
+   - GET /tbs : Track Box Status
 
 
 ## Configuration
@@ -46,7 +46,7 @@ Notes:
 
 ## Decoder Setup
 
-### Race Result System
+### Race Result Decoder
 
 Open the decoder web interface and select the "Configuration" link.
 Under "Upload target" select the option "Custom (HTTP)",
@@ -58,8 +58,24 @@ Then enable mobile upload on the decoder panel menu.
 
 ### Track Box
 
+Set the track box 'Status URL' and 'Track Ping URL' to be the
+url of your rrrelay instance, with a question mark on the end
+of the path, for example:
+
+	http://12.34.56.78:9012/tbp?
+
+In tag tool, connect to the track box, select the "Advanced" button,
+enter the updated URLs and then select "Apply Changes".
+Note that the url may be reported as not reachable if the
+host computer running Tag Tool is not online:
+
+![TB Config](tb_config.png "TB Config")
+
+
+
 ## Requirements
 
+   - tornado
    - metarace >=2.0
 
 ## Installation
