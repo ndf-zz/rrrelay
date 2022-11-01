@@ -6,11 +6,25 @@ and Track Box units to telegraph as timer messages:
 	INDEX;SOURCE;CHANNEL;REFID;TOD;DATE
 
    - INDEX : passing sequence number (set by the relay)
-   - SOURCE : decoder ID or nickname
+   - SOURCE : decoder ID
    - CHANNEL : loop id or timing channel
    - REFID : transponder unique ID
    - TOD : local time of day string eg 13h27:52.4321
    - DATE : date of passing  eg 2023-02-27
+
+Also relays HTTP GET status messages from Track Box units:
+
+	SOURCE;CHANNEL;TOD;DATE;STATUS;TEMP;NOISE;ACCEL;BATT
+
+   - SOURCE : decoder ID
+   - CHANNEL : loop id or timing channel
+   - TOD : local time of day string eg 13h27:52.4321
+   - DATE : date of passing  eg 2023-02-27
+   - STATUS : RR specific decoder status
+   - TEMP : temperature string
+   - NOISE : noise level string
+   - ACCEL : decoder orientation string
+   - BATT : battery level string
 
 
 ## HTTP Endpoints
@@ -64,10 +78,10 @@ of the path, for example:
 
 	http://12.34.56.78:9012/tbp?
 
-In tag tool, connect to the track box, select the "Advanced" button,
-enter the updated URLs and then select "Apply Changes".
-Note that the url may be reported as not reachable if the
-host computer running Tag Tool is not online:
+In tag tool, connect to the track box, select the "Advanced"
+button, enter the updated URLs and then select "Apply Changes".
+Note that the url may be reported as not reachable, even
+when correct and working.
 
 ![TB Config](tb_config.png "TB Config")
 

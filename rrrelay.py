@@ -63,13 +63,20 @@ class TbsHandler(tornado.web.RequestHandler):
     async def get(self):
         user = self.get_argument('custId', '-')
         if not self.app.userid or user == self.app.userid:
+            _log.debug('Status: %r', self.request)
             deviceid = self.get_argument('boxId')
             channel = self.app.channel(deviceid, 'C1')
             datestr = fixdate(self.get_argument('boxTime'))
             date, boxtime = tod.fromiso(datestr)
-            batt = self.get_argument('boxBatt')
-            temp = self.get_argument('boxTemp')
-            srec = [deviceid, channel, boxtime.rawtime(3), date, batt, temp]
+            temp = self.get_argument('boxTemp', '-')
+            stat = self.get_argument('readerStatus', 'NONE')
+            noise = self.get_argument('boxNoise', 'NONE')
+            accel = self.get_argument('boxAccel', '-')
+            batt = self.get_argument('boxBatt', '-')
+            srec = [
+                deviceid, channel,
+                boxtime.rawtime(3), date, stat, temp, noise, accel, batt
+            ]
             _log.info('TBS: %r', srec)
             await self.app.status(srec)
         self.write('OK')
@@ -84,6 +91,7 @@ class TbpHandler(tornado.web.RequestHandler):
     async def post(self):
         user = self.get_argument('custId', '-')
         if not self.app.userid or user == self.app.userid:
+            _log.debug('Ping: %r', self.request)
             deviceid = self.get_argument('boxId')
             posinfo = self.get_argument('boxPos', 'U')
             channel = self.app.channel(deviceid, 'C1')
@@ -129,6 +137,7 @@ class RrsHandler(tornado.web.RequestHandler):
     async def post(self):
         user = self.get_argument('user', '-')
         if not self.app.userid or user == self.app.userid:
+            _log.debug('Passing: %r', self.request)
             deviceid = self.get_argument('device')
             passings = []
             for l in self.request.body.decode('ascii', 'ignore').split('\n'):
